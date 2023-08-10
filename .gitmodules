@@ -1,0 +1,3 @@
+[submodule "deps/clapz"]
+	path = deps/clapz
+	url = ssh://github.com/eulegang/clapz
