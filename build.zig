@@ -32,6 +32,11 @@ pub fn build(b: *std.Build) void {
 
     exe.addModule("clapz", clapz);
 
+    exe.addIncludePath(std.build.LazyPath{ .path = "/usr/local/include/" });
+    exe.addLibraryPath(std.build.LazyPath{ .path = "/usr/local/lib64/" });
+    exe.linkSystemLibrary("libgit2");
+    exe.linkLibC();
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
