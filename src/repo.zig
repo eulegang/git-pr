@@ -39,10 +39,14 @@ pub const Repo = struct {
         _ = git2.git_libgit2_shutdown();
     }
 
-    pub fn remote(self: *Self, name: [*]const u8) !GitRemote {
+    pub fn remote(self: *Self, name: []const u8) !GitRemote {
         var r: ?*git2.git_remote = null;
 
-        const succ = git2.git_remote_lookup(&r, self.repo, name);
+        var buf: [4096]u8 = undefined;
+        @memcpy(buf[0..name.len], name);
+        buf[name.len] = 0;
+
+        const succ = git2.git_remote_lookup(&r, self.repo, &buf);
 
         if (succ != 0) {
             std.log.err("failed to find remote", .{});
@@ -54,6 +58,17 @@ pub const Repo = struct {
 
     pub fn config(self: *Self) !GitConfig {
         return GitConfig.init(self);
+    }
+
+    pub fn head(self: *Self) !?Ref {
+        var ref: ?*git2.git_reference = null;
+        const succ = git2.git_repository_head(&ref, self.repo);
+
+        if (succ != 0) {
+            return Error.git_error;
+        }
+
+        return Ref{ .ref = ref orelse unreachable };
     }
 
     fn discover() !GitBuf {
@@ -89,10 +104,26 @@ pub const GitRemote = struct {
         git2.git_remote_free(self.remote);
     }
 
-    pub fn url(self: *Self) []const u8 {
+    pub fn url(self: *Self, alloc: std.mem.Allocator) ![]const u8 {
         var remote_url = git2.git_remote_url(self.remote);
+        var span = std.mem.span(remote_url);
 
-        return std.mem.span(remote_url);
+        var buf = try alloc.alloc(u8, span.len);
+        @memcpy(buf, span);
+
+        return buf;
+    }
+
+    pub fn head(self: *Self, alloc: std.mem.Allocator) !?[]const u8 {
+        var buf = GitBuf.init();
+        defer buf.deinit();
+        const succ = git2.git_remote_default_branch(&buf.buf, self.remote);
+
+        if (succ != 0) {
+            return null;
+        }
+
+        return try buf.copy(alloc);
     }
 };
 
@@ -190,6 +221,31 @@ pub const GitBuf = struct {
         @memcpy(buf, self.slice());
 
         return buf;
+    }
+};
+
+pub const Ref = struct {
+    ref: *git2.git_reference,
+
+    pub fn shorthand(self: *const Ref, alloc: std.mem.Allocator) ![]const u8 {
+        const sh = git2.git_reference_shorthand(self.ref);
+
+        if (sh == null) {
+            return Error.git_error;
+        }
+
+        var spanned = std.mem.span(sh);
+
+        var buf = try alloc.alloc(u8, spanned.len);
+        @memcpy(buf, spanned);
+
+        return buf;
+    }
+
+    pub fn isBranch(self: *const Ref) bool {
+        const res = git2.git_reference_is_branch(self.ref);
+
+        return res != 0;
     }
 };
 
