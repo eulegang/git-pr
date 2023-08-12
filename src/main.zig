@@ -59,9 +59,21 @@ pub fn main() !void {
     var repo = try repository.Repo.open();
     defer repo.deinit();
 
-    std.debug.print("title: {s}\n", .{args.title});
-    std.debug.print("target remote: {?s}\n", .{args.target_remote});
-    std.debug.print("source remote: {?s}\n", .{args.source_remote});
-    std.debug.print("target branch: {?s}\n", .{args.target_branch});
-    std.debug.print("source branch: {?s}\n", .{args.source_branch});
+    var config = try repo.config();
+    defer config.deinit();
+
+    var buf: [4096]u8 = undefined;
+
+    if (args.target_remote) |dst| {
+        @memcpy(buf[0..dst.len], dst);
+        buf[dst.len] = 0;
+        var remote_name: [*]const u8 = &buf;
+        var remote = try repo.remote(remote_name);
+        defer remote.deinit();
+        std.debug.print("dst remote url: {s}\n", .{remote.url()});
+    }
+
+    if (try config.var_string("user.name", arg_alloc.allocator())) |username| {
+        std.debug.print("username: {s}\n", .{username});
+    }
 }
