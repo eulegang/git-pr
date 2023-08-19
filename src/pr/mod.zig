@@ -11,3 +11,5 @@ pub const Coord = struct {
     repo: []const u8,
     branch: []const u8,
 };
+
+pub const Requester = struct {};

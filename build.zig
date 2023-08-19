@@ -21,6 +21,22 @@ pub fn build(b: *std.Build) void {
         },
     });
 
+    const gpgmez = b.addModule("gpgmez", .{
+        .source_file = .{
+            .path = "./deps/gpgmez/src/main.zig",
+        },
+    });
+
+    const credsys = b.addModule("credsys", .{
+        .source_file = .{
+            .path = "./deps/credsys/src/main.zig",
+        },
+
+        .dependencies = &[_]std.Build.ModuleDependency{
+            .{ .name = "gpgmez", .module = gpgmez },
+        },
+    });
+
     const exe = b.addExecutable(.{
         .name = "git-pr",
         // In this case the main source file is merely a path, however, in more
@@ -31,9 +47,14 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.addModule("clapz", clapz);
+    exe.addModule("gpgmez", gpgmez);
+    exe.addModule("credsys", credsys);
 
     exe.addIncludePath(std.build.LazyPath{ .path = "/usr/local/include/" });
     exe.addLibraryPath(std.build.LazyPath{ .path = "/usr/local/lib64/" });
+    exe.addIncludePath(std.build.LazyPath{ .path = "/usr/include/" });
+    exe.addLibraryPath(std.build.LazyPath{ .path = "/usr/lib64/" });
+    exe.linkSystemLibrary("gpgme");
     exe.linkSystemLibrary("libgit2");
     exe.linkLibC();
 

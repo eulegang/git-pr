@@ -1,7 +1,10 @@
 const std = @import("std");
 const clapz = @import("clapz");
+const credsys = @import("credsys");
+
 const repository = @import("repo.zig");
 const pr = @import("pr/mod.zig");
+const secret = @import("secret.zig");
 const Freader = @import("freader.zig").Freader;
 
 const Args = struct {
@@ -73,8 +76,27 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     var alloc = gpa.allocator();
 
-    var pull_request = try build_pr(args, alloc);
+    var repo = try repository.Repo.open();
+    defer repo.deinit();
+
+    var config = try repo.config();
+    defer config.deinit();
+
+    var pull_request = try build_pr(args, &repo, &config, alloc);
     defer destroy_pr(pull_request, alloc);
+
+    var credentials = credsys.Credentials.init(gpa.allocator());
+    defer credentials.deinit();
+
+    if (try config.var_string("pr.gpg-path", arg_alloc.allocator())) |path| {
+        try credentials.gpg(path);
+    }
+
+    if (credentials.fetch()) |cred| {
+        std.debug.print("cred: {}\n", .{cred});
+
+        credentials.free(cred);
+    }
 
     std.debug.print("pull_request:\n", .{});
     std.debug.print("  title: {s}\n", .{pull_request.title});
@@ -87,13 +109,7 @@ pub fn main() !void {
     std.debug.print("    branch: {s}\n", .{pull_request.target.branch});
 }
 
-fn build_pr(args: Args, alloc: std.mem.Allocator) !pr.PullRequest {
-    var repo = try repository.Repo.open();
-    defer repo.deinit();
-
-    var config = try repo.config();
-    defer config.deinit();
-
+fn build_pr(args: Args, repo: *repository.Repo, config: *repository.GitConfig, alloc: std.mem.Allocator) !pr.PullRequest {
     const description = try read_description(args, alloc);
 
     var target: pr.Coord = undefined;

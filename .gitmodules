@@ -1,3 +1,9 @@
 [submodule "deps/clapz"]
 	path = deps/clapz
 	url = ssh://github.com/eulegang/clapz
+[submodule "deps/gpgmez"]
+	path = deps/gpgmez
+	url = ssh://github.com/eulegang/gpgmez
+[submodule "deps/credsys"]
+	path = deps/credsys
+	url = https://github.com/eulegang/credsys
