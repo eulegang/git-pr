@@ -4,7 +4,6 @@ const credsys = @import("credsys");
 
 const repository = @import("repo.zig");
 const pr = @import("pr/mod.zig");
-const secret = @import("secret.zig");
 const Freader = @import("freader.zig").Freader;
 
 const Args = struct {
