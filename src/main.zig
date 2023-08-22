@@ -2,7 +2,7 @@ const std = @import("std");
 const clapz = @import("clapz");
 const credsys = @import("credsys");
 
-const repository = @import("repo.zig");
+pub const repository = @import("repo.zig");
 const pr = @import("pr/mod.zig");
 const Freader = @import("freader.zig").Freader;
 
@@ -91,21 +91,10 @@ pub fn main() !void {
         try credentials.gpg(path);
     }
 
-    if (credentials.fetch()) |cred| {
-        std.debug.print("cred: {}\n", .{cred});
+    var requester = pr.Requester.init(gpa.allocator(), &config, &credentials);
+    defer requester.deinit();
 
-        credentials.free(cred);
-    }
-
-    std.debug.print("pull_request:\n", .{});
-    std.debug.print("  title: {s}\n", .{pull_request.title});
-    std.debug.print("  description: {s}\n", .{pull_request.description});
-    std.debug.print("  source:\n", .{});
-    std.debug.print("    url: {s}\n", .{pull_request.source.repo});
-    std.debug.print("    branch: {s}\n", .{pull_request.source.branch});
-    std.debug.print("  target:\n", .{});
-    std.debug.print("    url: {s}\n", .{pull_request.target.repo});
-    std.debug.print("    branch: {s}\n", .{pull_request.target.branch});
+    try requester.request_pull(pull_request);
 }
 
 fn build_pr(args: Args, repo: *repository.Repo, config: *repository.GitConfig, alloc: std.mem.Allocator) !pr.PullRequest {
